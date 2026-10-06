@@ -1,0 +1,2 @@
+export async function api(path: string, payload?: any) { const r = await fetch('/api/' + path, { credentials: 'include', cache: 'no-store', method: payload === undefined ? 'GET' : 'POST', headers: payload instanceof FormData ? {} : { 'Content-Type': 'application/json' }, body: payload === undefined ? undefined : payload instanceof FormData ? payload : JSON.stringify(payload) }); const d: any = await r.json(); if (!r.ok)
+    throw Error(d.error?.message || 'Unable to complete this request.'); return d.data; }

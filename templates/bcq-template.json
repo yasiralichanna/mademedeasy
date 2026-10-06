@@ -1,0 +1,24 @@
+[
+  {
+    "stem": "DEMONSTRATION ONLY: Which option is labeled B?",
+    "options": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ],
+    "correct": 1,
+    "explanation": "Nonmedical example for testing the import format.",
+    "incorrect": {},
+    "year": 1,
+    "subject": "Demonstration",
+    "module": "Interface checks",
+    "topic": "Sample questions",
+    "difficulty": "easy",
+    "tags": [
+      "demo"
+    ],
+    "source": "Development demonstration only",
+    "status": "draft"
+  }
+]

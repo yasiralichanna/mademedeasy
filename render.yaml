@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: mademedeasy
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: medprep
+      - key: CNIC_KEY
+        generateValue: true
+      - key: ADMIN_SETUP_TOKEN
+        generateValue: true
+      - key: EMAIL_FROM
+        value: y7087749@gmail.com
+      - key: EMAIL_USER
+        value: y7087749@gmail.com
+      - key: EMAIL_PASS
+        sync: false
