@@ -10,9 +10,9 @@ export async function GET() {
       status: 'healthy',
       database: 'mongodb',
       service: 'MedPrep BCQs',
-      emailConfigured: !!(process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD),
+      emailConfigured: !!(process.env.BREVO_API_KEY || process.env.RESEND_API_KEY || process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD),
+      emailProvider: process.env.BREVO_API_KEY ? 'brevo_http' : process.env.RESEND_API_KEY ? 'resend_http' : 'gmail_smtp',
       emailFrom: process.env.EMAIL_FROM || 'y7087749@gmail.com',
-      emailUser: process.env.EMAIL_USER || 'y7087749@gmail.com',
     });
   });
 }
