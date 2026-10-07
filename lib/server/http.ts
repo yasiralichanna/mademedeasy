@@ -18,4 +18,18 @@ catch (e) {
     console.error('request_failed');
     return Response.json({ error: { message: 'Unable to complete this request. Please try again.' } }, { status: 503 });
 } }
-export function origin(req: Request) { const o = req.headers.get('origin'); check(!o || o === new URL(req.url).origin, 'Request origin rejected', 403); }
+export function origin(req: Request) {
+    const o = req.headers.get('origin');
+    if (!o) return;
+    try {
+        const originUrl = new URL(o);
+        const reqUrl = new URL(req.url);
+        if (originUrl.origin === reqUrl.origin) return;
+        const reqHost = (req.headers.get('x-forwarded-host')?.split(',')[0].trim() || req.headers.get('host') || reqUrl.host).toLowerCase();
+        if (originUrl.host.toLowerCase() === reqHost) return;
+        if (process.env.RENDER_EXTERNAL_URL && originUrl.host.toLowerCase() === new URL(process.env.RENDER_EXTERNAL_URL).host.toLowerCase()) return;
+        check(false, 'Request origin rejected', 403);
+    } catch {
+        check(false, 'Request origin rejected', 403);
+    }
+}
