@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Plus, Upload, FileDown, Search, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { Plus, Upload, FileDown, Search, CheckCircle2, AlertTriangle, XCircle, Globe, CheckSquare, Square } from 'lucide-react';
 import { api } from '../api';
 import { Empty, Modal, Status } from '../../components/Common';
 
@@ -9,7 +9,7 @@ export default function Questions() {
   const [edit, setEdit] = useState<any>(null);
   const [importing, setImporting] = useState(false);
   const [text, setText] = useState('');
-  const [format, setFormat] = useState('json');
+  const [format, setFormat] = useState('csv');
   const [preview, setPreview] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
@@ -17,14 +17,27 @@ export default function Questions() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Selection & Pagination states
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
+
   const load = () =>
     api('questions/admin')
-      .then(setItems)
+      .then((data) => {
+        setItems(data);
+        setSelected(new Set());
+      })
       .catch((e) => setMessage(e.message));
 
   useEffect(() => {
     load();
   }, []);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [search, status, yearFilter]);
 
   async function save(e: any) {
     e.preventDefault();
@@ -52,7 +65,7 @@ export default function Questions() {
     }
   }
 
-  async function doImport(commit = false, skipInvalid = false) {
+  async function doImport(commit = false, skipInvalid = false, publishImmediately = false) {
     setBusy(true);
     try {
       const d = await api('questions/import', {
@@ -60,6 +73,7 @@ export default function Questions() {
         format,
         commit,
         skip_invalid: skipInvalid,
+        publish_immediately: publishImmediately,
         default_exam_type: 'practice',
       });
       if (commit) {
@@ -78,12 +92,95 @@ export default function Questions() {
     }
   }
 
-  const filtered = items.filter(
-    (q) =>
-      (status === 'all' || q.status === status) &&
-      (yearFilter === 'all' || String(q.year) === yearFilter) &&
-      q.stem.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    return items.filter(
+      (q) =>
+        (status === 'all' || q.status === status) &&
+        (yearFilter === 'all' || String(q.year) === yearFilter) &&
+        q.stem.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [items, status, yearFilter, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+
+  // Total draft count in current filtered list and overall
+  const overallDraftsCount = useMemo(() => items.filter((q) => q.status === 'draft').length, [items]);
+  const filteredDraftsCount = useMemo(() => filtered.filter((q) => q.status === 'draft').length, [filtered]);
+
+  // Selection helpers
+  const isPageAllSelected = paginatedItems.length > 0 && paginatedItems.every((q) => selected.has(q.id));
+
+  function toggleSelectPage() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (isPageAllSelected) {
+        paginatedItems.forEach((q) => next.delete(q.id));
+      } else {
+        paginatedItems.forEach((q) => next.add(q.id));
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectRow(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllFiltered() {
+    setSelected(new Set(filtered.map((q) => q.id)));
+  }
+
+  function clearSelection() {
+    setSelected(new Set());
+  }
+
+  // Bulk Publish Handlers
+  async function publishSelected() {
+    if (selected.size === 0) return;
+    const count = selected.size;
+    if (!window.confirm(`Publish ${count} selected question(s)? They will become available to enrolled students.`)) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await api('questions/publish', { ids: Array.from(selected) });
+      setMessage(res.message);
+      setSelected(new Set());
+      load();
+    } catch (e: any) {
+      setMessage(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function publishAllDrafts() {
+    if (overallDraftsCount === 0) return;
+    if (!window.confirm(`Are you sure you want to publish ALL ${overallDraftsCount} draft question(s)?`)) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await api('questions/publish', { all_drafts: true });
+      setMessage(res.message);
+      setSelected(new Set());
+      load();
+    } catch (e: any) {
+      setMessage(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <>
@@ -103,7 +200,23 @@ export default function Questions() {
               Practice questions grouped by MBBS year and unlocked for students with matching package access.
             </small>
           </div>
-          <div className="row">
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            {overallDraftsCount > 0 && (
+              <button
+                className="btn"
+                style={{
+                  background: 'rgba(34, 197, 94, 0.14)',
+                  color: '#4ade80',
+                  borderColor: 'rgba(34, 197, 94, 0.4)',
+                  fontWeight: 600,
+                }}
+                disabled={busy}
+                onClick={publishAllDrafts}
+                title="Publish all draft questions in the question bank at once"
+              >
+                <Globe size={15} /> Publish all drafts ({overallDraftsCount})
+              </button>
+            )}
             <button
               className="btn"
               onClick={() => {
@@ -158,17 +271,77 @@ export default function Questions() {
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
-            {['all', 'draft', 'published', 'archived'].map((s) => (
-              <option key={s}>{s}</option>
-            ))}
+            <option value="all">All Statuses ({items.length})</option>
+            <option value="draft">Drafts ({items.filter((q) => q.status === 'draft').length})</option>
+            <option value="published">Published ({items.filter((q) => q.status === 'published').length})</option>
+            <option value="archived">Archived ({items.filter((q) => q.status === 'archived').length})</option>
           </select>
         </div>
+
+        {/* Bulk Action Bar when items are selected */}
+        {selected.size > 0 && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(59, 130, 246, 0.14)',
+              border: '1px solid rgba(59, 130, 246, 0.35)',
+              borderRadius: 8,
+              padding: '10px 16px',
+              marginBottom: 16,
+              flexWrap: 'wrap',
+              gap: 10,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 600, color: '#93c5fd' }}>
+                ✓ {selected.size} of {filtered.length} question{filtered.length === 1 ? '' : 's'} selected
+              </span>
+              {selected.size < filtered.length && (
+                <button
+                  className="btn"
+                  style={{ fontSize: 12, padding: '4px 10px' }}
+                  onClick={selectAllFiltered}
+                >
+                  Select all {filtered.length} matching questions
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn primary"
+                style={{ background: '#22c55e', borderColor: '#16a34a', fontWeight: 600 }}
+                disabled={busy}
+                onClick={publishSelected}
+              >
+                <CheckCircle2 size={15} /> Publish {selected.size} selected
+              </button>
+              <button
+                className="btn"
+                style={{ fontSize: 12 }}
+                onClick={clearSelection}
+              >
+                Clear selection
+              </button>
+            </div>
+          </div>
+        )}
 
         {filtered.length ? (
           <div className="table-wrap">
             <table style={{ whiteSpace: 'normal' }}>
               <thead>
                 <tr>
+                  <th style={{ width: 44, textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={isPageAllSelected}
+                      onChange={toggleSelectPage}
+                      title={isPageAllSelected ? 'Deselect this page' : 'Select all on this page'}
+                      style={{ cursor: 'pointer', width: 16, height: 16 }}
+                    />
+                  </th>
                   <th>Question</th>
                   <th>Academic path & Year</th>
                   <th>Status</th>
@@ -176,37 +349,88 @@ export default function Questions() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((q) => (
-                  <tr key={q.id}>
-                    <td style={{ minWidth: 260 }}>
-                      <div style={{ fontWeight: 500 }}>{q.stem}</div>
-                      <small style={{ display: 'block', color: 'var(--muted)', marginTop: 4 }}>
-                        {q.difficulty} difficulty · {q.options?.length || 0} options
-                      </small>
-                    </td>
-                    <td style={{ minWidth: 180 }}>
-                      <span className="pill" style={{ marginBottom: 4, display: 'inline-block' }}>
-                        Year {q.year} MBBS
-                      </span>
-                      <div>
-                        <strong>{q.subject}</strong>
-                      </div>
-                      <small style={{ display: 'block', color: 'var(--muted)' }}>
-                        {q.module} / {q.topic}
-                      </small>
-                    </td>
-                    <td>
-                      <Status value={q.status} />
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button className="btn" onClick={() => setEdit(q)}>
-                        Review / edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {paginatedItems.map((q) => {
+                  const isSelected = selected.has(q.id);
+                  return (
+                    <tr key={q.id} style={{ background: isSelected ? 'rgba(59, 130, 246, 0.08)' : undefined }}>
+                      <td style={{ textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectRow(q.id)}
+                          style={{ cursor: 'pointer', width: 16, height: 16 }}
+                        />
+                      </td>
+                      <td style={{ minWidth: 260 }}>
+                        <div style={{ fontWeight: 500 }}>{q.stem}</div>
+                        <small style={{ display: 'block', color: 'var(--muted)', marginTop: 4 }}>
+                          {q.difficulty} difficulty · {q.options?.length || 0} options · Answer: {String.fromCharCode(65 + (q.correct || 0))}
+                        </small>
+                      </td>
+                      <td style={{ minWidth: 180 }}>
+                        <span className="pill" style={{ marginBottom: 4, display: 'inline-block' }}>
+                          Year {q.year} MBBS
+                        </span>
+                        <div>
+                          <strong>{q.subject}</strong>
+                        </div>
+                        <small style={{ display: 'block', color: 'var(--muted)' }}>
+                          {q.module} / {q.topic}
+                        </small>
+                      </td>
+                      <td>
+                        <Status value={q.status} />
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button className="btn" onClick={() => setEdit(q)}>
+                          Review / edit
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginTop: 16,
+                  padding: '12px 6px',
+                  borderTop: '1px solid var(--border)',
+                  fontSize: 13,
+                  flexWrap: 'wrap',
+                  gap: 10,
+                }}
+              >
+                <span style={{ color: 'var(--muted)' }}>
+                  Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length} questions
+                </span>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button
+                    className="btn"
+                    disabled={currentPage === 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </button>
+                  <span style={{ padding: '0 8px', fontWeight: 600 }}>
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    className="btn"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <Empty
@@ -404,7 +628,7 @@ export default function Questions() {
           </label>
 
           <small style={{ color: 'var(--muted)', display: 'block', marginTop: -4, marginBottom: 12 }}>
-            ⚡ Supports 1–1,500 questions at a time (up to 25 MB). All imported questions are saved as drafts in Practice BCQs.
+            ⚡ Supports 1–1,500 questions at a time (up to 25 MB). You can import as drafts or publish directly.
           </small>
 
           {preview && (
@@ -495,7 +719,7 @@ export default function Questions() {
             </div>
           )}
 
-          <div className="form-actions" style={{ marginTop: 18 }}>
+          <div className="form-actions" style={{ marginTop: 18, flexWrap: 'wrap', gap: 8 }}>
             <button
               className="btn"
               disabled={busy || !text.trim()}
@@ -506,24 +730,24 @@ export default function Questions() {
 
             {preview && preview.valid > 0 && (
               <>
-                {preview.invalid === 0 ? (
-                  <button
-                    className="btn primary"
-                    disabled={busy}
-                    onClick={() => doImport(true, false)}
-                  >
-                    {busy ? 'Importing…' : `Import all ${preview.valid} as drafts`}
-                  </button>
-                ) : (
-                  <button
-                    className="btn primary"
-                    disabled={busy}
-                    title="Import questions that passed validation and skip rows with errors"
-                    onClick={() => doImport(true, true)}
-                  >
-                    {busy ? 'Importing…' : `Import ${preview.valid} valid questions as drafts`}
-                  </button>
-                )}
+                {/* Option 1: Import as Drafts */}
+                <button
+                  className="btn"
+                  disabled={busy}
+                  onClick={() => doImport(true, preview.invalid > 0, false)}
+                >
+                  {busy ? 'Importing…' : `Import ${preview.valid} as drafts`}
+                </button>
+
+                {/* Option 2: Import and Publish Directly */}
+                <button
+                  className="btn primary"
+                  style={{ background: '#22c55e', borderColor: '#16a34a', fontWeight: 600 }}
+                  disabled={busy}
+                  onClick={() => doImport(true, preview.invalid > 0, true)}
+                >
+                  <Globe size={15} /> {busy ? 'Publishing…' : `Import & Publish all ${preview.valid}`}
+                </button>
               </>
             )}
           </div>

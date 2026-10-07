@@ -8,7 +8,7 @@ import { validateQuestion, parseCSV } from './validation';
 import { categoryStatements, questionStatements, decodeQuestion } from './service';
 
 export async function handle(action: string, req: Request) {
-  const u = await requireUser(req, ['admin', 'save', 'import', 'categories'].includes(action));
+  const u = await requireUser(req, ['admin', 'save', 'import', 'categories', 'publish'].includes(action));
 
   if (action === 'catalog') {
     await guard(u);
@@ -183,7 +183,7 @@ export async function handle(action: string, req: Request) {
         difficulty: q.difficulty,
         tags: JSON.stringify(q.tags || []),
         source: q.source || '',
-        status: 'draft',
+        status: p.publish_immediately ? 'published' : 'draft',
         exam_type: 'practice',
       };
     });
@@ -203,12 +203,52 @@ export async function handle(action: string, req: Request) {
     }
 
     // 3. Audit log
-    await record(u.id, 'questions_imported', String(rowsToImport.length), 'All imported as Practice BCQs (Drafts)');
+    const statusLabel = p.publish_immediately ? 'Published' : 'Drafts';
+    await record(u.id, 'questions_imported', String(rowsToImport.length), `Imported as Practice BCQs (${statusLabel})`);
 
     return json({
-      message: `${rowsToImport.length} questions successfully imported as Practice BCQs (Drafts).`,
+      message: `${rowsToImport.length} questions successfully imported as Practice BCQs (${statusLabel}).`,
       imported: rowsToImport.length,
     });
+  }
+
+  if (action === 'publish') {
+    const p: any = await req.json();
+    for (const field of ['id', 'user_id', 'question_id', 'email', 'token']) {
+      if (p[field] !== undefined) check(typeof p[field] === 'string', 'Invalid ' + field + '.');
+    }
+    const qCol = await collection('questions');
+
+    if (Array.isArray(p.ids) && p.ids.length > 0) {
+      check(p.ids.length <= 5000, 'Too many questions to publish at once.');
+      const res = await qCol.updateMany(
+        { id: { $in: p.ids }, status: 'draft' },
+        { $set: { status: 'published', exam_type: 'practice' } }
+      );
+      await record(u.id, 'questions_published', String(res.modifiedCount), `Published ${res.modifiedCount} questions from draft`);
+      return json({
+        message: `${res.modifiedCount} question${res.modifiedCount === 1 ? '' : 's'} published successfully.`,
+        count: res.modifiedCount
+      });
+    }
+
+    if (p.all_drafts) {
+      const filter: any = { status: 'draft' };
+      if (p.year && Number(p.year) >= 1 && Number(p.year) <= 5) {
+        filter.year = Number(p.year);
+      }
+      const res = await qCol.updateMany(
+        filter,
+        { $set: { status: 'published', exam_type: 'practice' } }
+      );
+      await record(u.id, 'questions_published', String(res.modifiedCount), `Bulk published all ${res.modifiedCount} draft questions`);
+      return json({
+        message: `All ${res.modifiedCount} draft question${res.modifiedCount === 1 ? '' : 's'} published successfully.`,
+        count: res.modifiedCount
+      });
+    }
+
+    check(false, 'Select questions or choose all drafts to publish.');
   }
 
   if (action === 'template') {
