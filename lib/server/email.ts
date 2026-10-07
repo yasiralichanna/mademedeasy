@@ -1,29 +1,6 @@
-import nodemailer, { type Transporter } from 'nodemailer';
+import nodemailer from 'nodemailer';
 
 export const FROM_EMAIL = 'y7087749@gmail.com';
-
-declare global {
-  var _nodemailerTransporter: Transporter | undefined;
-}
-
-function getTransporter(user: string, pass: string) {
-  if (!globalThis._nodemailerTransporter) {
-    globalThis._nodemailerTransporter = nodemailer.createTransport({
-      service: 'gmail',
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      pool: true,
-      maxConnections: 3,
-      maxMessages: 100,
-      auth: {
-        user,
-        pass: pass.replace(/\s+/g, ''),
-      },
-    });
-  }
-  return globalThis._nodemailerTransporter;
-}
 
 export async function sendOtpEmail(to: string, otp: string): Promise<{ success: boolean; error?: string }> {
   const user = process.env.EMAIL_USER || FROM_EMAIL;
@@ -32,13 +9,19 @@ export async function sendOtpEmail(to: string, otp: string): Promise<{ success: 
   console.log(`[OTP Notification] Verification code ${otp} for ${to} from ${FROM_EMAIL}`);
 
   if (!pass) {
-    const msg = `EMAIL_PASS is not configured. Add your 16-character Google App Password in environment variables as EMAIL_PASS.`;
+    const msg = `EMAIL_PASS is not configured in Render environment variables. Please add EMAIL_PASS to your service settings.`;
     console.error(`[OTP Delivery] ${msg}`);
     return { success: false, error: msg };
   }
 
   try {
-    const transporter = getTransporter(user, pass);
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user,
+        pass: pass.replace(/\s+/g, ''),
+      },
+    });
 
     const mailOptions = {
       from: `"MedPrep / MadeMedEasy" <${FROM_EMAIL}>`,
@@ -68,8 +51,6 @@ export async function sendOtpEmail(to: string, otp: string): Promise<{ success: 
     return { success: true };
   } catch (err: any) {
     console.error(`[OTP Error] Failed to send email via SMTP from ${FROM_EMAIL}:`, err);
-    // Reset cached transporter on failure so next attempt establishes fresh connection
-    globalThis._nodemailerTransporter = undefined;
     return { success: false, error: err.message };
   }
 }
