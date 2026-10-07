@@ -1,30 +1,44 @@
-import nodemailer from 'nodemailer';
+import nodemailer, { type Transporter } from 'nodemailer';
 
 export const FROM_EMAIL = 'y7087749@gmail.com';
 
-export async function sendOtpEmail(to: string, otp: string): Promise<{ success: boolean; error?: string }> {
-  const user = process.env.EMAIL_USER || FROM_EMAIL;
-  const pass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD;
+declare global {
+  var _nodemailerTransporter: Transporter | undefined;
+}
 
-  console.log(`[OTP Notification] Sent verification code ${otp} to ${to} from ${FROM_EMAIL}`);
-
-  if (!pass) {
-    const msg = `EMAIL_PASS is not configured in .env. Add your 16-character Google App Password in .env as EMAIL_PASS to deliver emails to Gmail.`;
-    console.error(`[OTP Delivery] ${msg}`);
-    return { success: false, error: msg };
-  }
-
-  try {
-    const transporter = nodemailer.createTransport({
+function getTransporter(user: string, pass: string) {
+  if (!globalThis._nodemailerTransporter) {
+    globalThis._nodemailerTransporter = nodemailer.createTransport({
       service: 'gmail',
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 100,
       auth: {
         user,
         pass: pass.replace(/\s+/g, ''),
       },
     });
+  }
+  return globalThis._nodemailerTransporter;
+}
+
+export async function sendOtpEmail(to: string, otp: string): Promise<{ success: boolean; error?: string }> {
+  const user = process.env.EMAIL_USER || FROM_EMAIL;
+  const pass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD;
+
+  console.log(`[OTP Notification] Verification code ${otp} for ${to} from ${FROM_EMAIL}`);
+
+  if (!pass) {
+    const msg = `EMAIL_PASS is not configured. Add your 16-character Google App Password in environment variables as EMAIL_PASS.`;
+    console.error(`[OTP Delivery] ${msg}`);
+    return { success: false, error: msg };
+  }
+
+  try {
+    const transporter = getTransporter(user, pass);
 
     const mailOptions = {
       from: `"MedPrep / MadeMedEasy" <${FROM_EMAIL}>`,
@@ -54,6 +68,8 @@ export async function sendOtpEmail(to: string, otp: string): Promise<{ success: 
     return { success: true };
   } catch (err: any) {
     console.error(`[OTP Error] Failed to send email via SMTP from ${FROM_EMAIL}:`, err);
+    // Reset cached transporter on failure so next attempt establishes fresh connection
+    globalThis._nodemailerTransporter = undefined;
     return { success: false, error: err.message };
   }
 }

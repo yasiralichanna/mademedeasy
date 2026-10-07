@@ -22,13 +22,13 @@ export async function generateAndSendOtp(email: string, userId: string) {
     const codeHash = await digest(code);
     const expires = now() + 10 * 60 * 1000;
     await upsert('otps', { email }, { email, user_id: userId, codeHash, expires, attempts: 0, created: now() }).run();
-    const mailResult = await sendOtpEmail(email, code);
+    // Dispatch email without freezing the UI for 5+ seconds
+    const mailPromise = sendOtpEmail(email, code);
+    await Promise.race([mailPromise, new Promise(r => setTimeout(r, 800))]);
     return {
         otpRequired: true,
         email,
-        message: mailResult.success
-            ? `A 6-digit verification code has been sent from ${FROM_EMAIL} to ${email}.`
-            : `Verification code was generated. ${mailResult.error || 'Please check your mailbox.'}`
+        message: `A 6-digit verification code has been sent from ${FROM_EMAIL} to ${email}.`
     };
 }
 

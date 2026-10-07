@@ -1,14 +1,22 @@
 import { MongoClient, type ClientSession } from 'mongodb';
 import { readFile, mkdir, writeFile, unlink } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
-let connection: Promise<MongoClient> | undefined;
+declare global {
+  var _mongoConnection: Promise<MongoClient> | undefined;
+}
+
 export async function client() {
-  if (!connection) {
+  if (!globalThis._mongoConnection) {
     const uri = process.env.MONGODB_URI;
     if (!uri) throw new Error('MONGODB_URI is required');
-    connection = new MongoClient(uri, { serverSelectionTimeoutMS: 10000 }).connect().catch(e => { connection = undefined; throw e; });
+    globalThis._mongoConnection = new MongoClient(uri, {
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      maxIdleTimeMS: 30000,
+      serverSelectionTimeoutMS: 8000,
+    }).connect().catch(e => { globalThis._mongoConnection = undefined; throw e; });
   }
-  return connection;
+  return globalThis._mongoConnection;
 }
 export async function collection(name: string) { return (await client()).db(process.env.MONGODB_DB || 'medprep').collection<any>(name); }
 export async function one(name: string, filter: any = {}, options: any = {}, session?: ClientSession): Promise<any> { return (await collection(name)).findOne(filter, { projection: { _id: 0 }, ...options, session }); }
