@@ -73,7 +73,28 @@ export async function sendOtpEmail(to: string, otp: string): Promise<{ success: 
     }
   }
 
-  // 3. SMTP (Google Gmail SMTP Port 465 with 3.5s timeout)
+  // 3. HTTP REST API: Google Apps Script Web App (Sends directly from your Gmail over Port 443 with 0 signups!)
+  if (process.env.GMAIL_HTTP_URL) {
+    try {
+      const res = await fetch(process.env.GMAIL_HTTP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to,
+          subject: `Your Login Verification Code: ${otp}`,
+          text: `Your one-time login verification code is: ${otp}\n\nThis code will expire in 10 minutes.\nSent from ${FROM_EMAIL}.`,
+          html: htmlBody,
+        }),
+      });
+      if (res.ok) return { success: true };
+      return { success: false, error: 'Google Apps Script relay returned ' + res.status };
+    } catch (e: any) {
+      console.error('[Google Apps Script Error]', e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  // 4. SMTP (Google Gmail SMTP Port 465 with 3.5s timeout)
   const user = process.env.EMAIL_USER || FROM_EMAIL;
   const pass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD;
 
