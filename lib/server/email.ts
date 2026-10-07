@@ -76,7 +76,8 @@ export async function sendOtpEmail(to: string, otp: string): Promise<{ success: 
   // 3. HTTP REST API: Google Apps Script Web App (Sends directly from your Gmail over Port 443 with 0 signups!)
   if (process.env.GMAIL_HTTP_URL) {
     try {
-      const res = await fetch(process.env.GMAIL_HTTP_URL, {
+      const url = process.env.GMAIL_HTTP_URL.trim();
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -85,8 +86,16 @@ export async function sendOtpEmail(to: string, otp: string): Promise<{ success: 
           text: `Your one-time login verification code is: ${otp}\n\nThis code will expire in 10 minutes.\nSent from ${FROM_EMAIL}.`,
           html: htmlBody,
         }),
+        redirect: 'follow',
       });
-      if (res.ok) return { success: true };
+      if (res.ok || res.status === 200 || res.status === 302) return { success: true };
+
+      const getUrl = new URL(url);
+      getUrl.searchParams.set('to', to);
+      getUrl.searchParams.set('otp', otp);
+      const getRes = await fetch(getUrl.toString(), { redirect: 'follow' });
+      if (getRes.ok) return { success: true };
+
       return { success: false, error: 'Google Apps Script relay returned ' + res.status };
     } catch (e: any) {
       console.error('[Google Apps Script Error]', e);
