@@ -7,27 +7,31 @@ import { digest } from '../../lib/server/crypto';
 import { validateQuestion, parseCSV } from './validation';
 import { categoryStatements, questionStatements, decodeQuestion } from './service';
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 export async function handle(action: string, req: Request) {
   if (action === 'demo') {
     const url = new URL(req.url);
     const yearParam = url.searchParams.get('year');
-    const matchFilter: any = { status: 'published' };
+    const filter: any = { status: 'published' };
     if (yearParam && !isNaN(Number(yearParam))) {
-      matchFilter.year = Number(yearParam);
+      filter.year = Number(yearParam);
     }
-    const col = await collection('questions');
-    let qs = await col.aggregate([
-      { $match: matchFilter },
-      { $sample: { size: 15 } }
-    ]).toArray();
-
-    if (qs.length === 0 && matchFilter.year) {
-      qs = await col.aggregate([
-        { $match: { status: 'published' } },
-        { $sample: { size: 15 } }
-      ]).toArray();
+    // Fix a pool of 30 published BCQs (excluding drafts, deterministic order)
+    let fixed30 = await rows('questions', filter, { limit: 30, sort: { _id: 1 } });
+    if (fixed30.length === 0 && filter.year) {
+      fixed30 = await rows('questions', { status: 'published' }, { limit: 30, sort: { _id: 1 } });
     }
-    return json(qs.map(decodeQuestion));
+    // Randomly select 15 questions from the fixed 30 BCQs pool
+    const selected15 = shuffle(fixed30).slice(0, 15);
+    return json(selected15.map(decodeQuestion));
   }
 
   const u = await requireUser(req, ['admin', 'save', 'import', 'categories', 'publish'].includes(action));
