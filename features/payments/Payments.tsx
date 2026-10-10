@@ -1,10 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { CreditCard, Clock3, ShieldCheck, Upload, CheckCircle2, GraduationCap } from 'lucide-react';
+import { CreditCard, Clock3, ShieldCheck, Upload, CheckCircle2, GraduationCap, Sparkles } from 'lucide-react';
 import { api } from '../api';
 import { Head, Empty, Modal, Status, money, date } from '../../components/Common';
 
-export default function Payments({ refresh }: { refresh: () => void }) {
+export default function Payments({
+  refresh,
+  navigate,
+}: {
+  refresh: () => void;
+  navigate?: (s: string) => void;
+}) {
   const [data, setData] = useState<any>({
     packages: [],
     accounts: [],
@@ -97,6 +103,43 @@ export default function Payments({ refresh }: { refresh: () => void }) {
       ) : data.access.state === 'scheduled' ? (
         <div className="notice">Your access begins on {date(data.access.starts)}.</div>
       ) : null}
+
+      {data.access.state !== 'active' && navigate && (
+        <div
+          style={{
+            background: '#eef8f6',
+            border: '1px solid #bfe7df',
+            borderRadius: '10px',
+            padding: '16px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            marginBottom: '22px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Sparkles size={20} color="var(--teal)" />
+            <div>
+              <strong style={{ fontSize: '14px', color: '#0f524a', display: 'block' }}>
+                Unsure which package to choose?
+              </strong>
+              <small style={{ fontSize: '13px', color: '#457973' }}>
+                Try 15 authentic demo BCQs from our real question bank for free before subscribing.
+              </small>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => navigate('demo')}
+            style={{ fontSize: '13px', padding: '8px 16px', fontWeight: '700' }}
+          >
+            Try 15 Free Demo BCQs
+          </button>
+        </div>
+      )}
 
       <div className="panel-head" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div>

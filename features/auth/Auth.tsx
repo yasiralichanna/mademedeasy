@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { GraduationCap, ShieldCheck, BookOpen, Clock3, Eye, EyeOff, MailCheck } from 'lucide-react';
+import { GraduationCap, ShieldCheck, BookOpen, Clock3, Eye, EyeOff, MailCheck, Sparkles } from 'lucide-react';
+import DemoBcqs from '../demo/DemoBcqs';
 
 export default function Auth({ reload }: { reload: () => Promise<boolean> }) {
   const [mode, setMode] = useState(
@@ -11,6 +12,10 @@ export default function Auth({ reload }: { reload: () => Promise<boolean> }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [show, setShow] = useState(false);
+  const [showDemo, setShowDemo] = useState(
+    typeof window !== 'undefined' &&
+      (new URLSearchParams(window.location.search).has('demo') || window.location.pathname === '/demo')
+  );
 
   // OTP Verification state for login
   const [otpPending, setOtpPending] = useState(false);
@@ -116,6 +121,20 @@ export default function Auth({ reload }: { reload: () => Promise<boolean> }) {
     }
   }
 
+  if (showDemo) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--paper)', padding: '24px 16px' }}>
+        <DemoBcqs
+          onExit={() => setShowDemo(false)}
+          onSignUp={() => {
+            setShowDemo(false);
+            setMode('register');
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="auth-page">
       <section className="auth-story">
@@ -148,12 +167,72 @@ export default function Auth({ reload }: { reload: () => Promise<boolean> }) {
               Access reviewed by your administrator
             </span>
           </div>
+
+          <div style={{ marginTop: '36px' }}>
+            <button
+              type="button"
+              onClick={() => setShowDemo(true)}
+              className="btn"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: 'white',
+                border: '1px solid rgba(105, 208, 196, 0.5)',
+                backdropFilter: 'blur(8px)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontWeight: '700',
+                fontSize: '14px',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              <Sparkles size={18} color="#69d0c4" />
+              Try 15 Free Demo BCQs (No Sign In)
+            </button>
+          </div>
         </div>
         <small>Made for MBBS students in Pakistan</small>
       </section>
 
       <section className="auth-form">
         <div className="auth-card">
+          <div
+            style={{
+              background: '#eef8f6',
+              border: '1px solid #c0e7df',
+              borderRadius: '8px',
+              padding: '10px 14px',
+              marginBottom: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '10px',
+            }}
+          >
+            <span style={{ fontSize: '13px', color: '#13544d', fontWeight: '600' }}>
+              Want to try real BCQs first?
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowDemo(true)}
+              style={{
+                background: 'var(--teal)',
+                color: 'white',
+                border: 0,
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              ✨ Try 15 Demo BCQs
+            </button>
+          </div>
+
           <span className="pill">
             {otpPending ? (
               <>
@@ -223,6 +302,21 @@ export default function Auth({ reload }: { reload: () => Promise<boolean> }) {
                 }}
               >
                 Create account
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDemo(true)}
+                style={{
+                  color: 'var(--teal)',
+                  fontWeight: '700',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                }}
+              >
+                <Sparkles size={14} />
+                Demo (15 BCQs)
               </button>
             </div>
           )}

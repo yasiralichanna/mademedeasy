@@ -15,6 +15,7 @@ import {
   LogOut,
   Menu,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { api } from '../features/api';
 import Dashboard from '../features/dashboard/Dashboard';
@@ -25,6 +26,7 @@ import Start from '../features/attempts/Start';
 import Attempt from '../features/attempts/Attempt';
 import Payments from '../features/payments/Payments';
 import Profile from '../features/profiles/Profile';
+import DemoBcqs from '../features/demo/DemoBcqs';
 
 export default function Workspace({ user, logout }: { user: any; logout: () => void }) {
   const [page, setPage] = useState(user.role === 'admin' ? 'admin' : 'dashboard');
@@ -90,6 +92,7 @@ export default function Workspace({ user, logout }: { user: any; logout: () => v
       : [
           ['dashboard', 'Overview', LayoutDashboard],
           ['practice', 'Practice BCQs', BookOpen],
+          ['demo', 'Demo BCQs (15 Free)', Sparkles],
           ['bookmarks', 'Bookmarks', Bookmark],
           ['incorrect', 'Revise mistakes', Target],
           ['results', 'Results & progress', ChartNoAxesCombined],
@@ -176,11 +179,14 @@ export default function Workspace({ user, logout }: { user: any; logout: () => v
           {page === 'results' && <Results navigate={navigate} />}
           {page === 'notifications' && <Notifications />}
           {user.role === 'student' && page === 'dashboard' && <Dashboard user={user} data={data} navigate={navigate} />}
+          {user.role === 'student' && page === 'demo' && (
+            <DemoBcqs user={user} onExit={() => navigate('dashboard')} onSignUp={() => navigate('payments')} />
+          )}
           {user.role === 'student' && ['practice', 'bookmarks', 'incorrect'].includes(page) && (
             <Start key={page} mode={page} user={user} navigate={navigate} />
           )}
           {page.startsWith('attempt:') && <Attempt key={page} id={page.slice(8)} navigate={navigate} refresh={reload} />}
-          {user.role === 'student' && page === 'payments' && <Payments refresh={reload} />}
+          {user.role === 'student' && page === 'payments' && <Payments refresh={reload} navigate={navigate} />}
           {page === 'admin' && user.role === 'admin' && <Admin />}
           {page === 'profile' && <Profile user={user} refresh={reload} onDeleted={logout} />}
         </main>

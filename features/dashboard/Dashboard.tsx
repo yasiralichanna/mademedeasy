@@ -1,5 +1,5 @@
 'use client';
-import { BookOpen, Target, Bookmark, Timer, CheckCircle2 } from 'lucide-react';
+import { BookOpen, Target, Bookmark, Timer, CheckCircle2, Sparkles } from 'lucide-react';
 import { Head, Empty, Status, date } from '../../components/Common';
 
 export default function Dashboard({
@@ -64,6 +64,55 @@ export default function Dashboard({
         </button>
       </section>
 
+      {data?.access?.state !== 'active' && (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #e6f6f4 0%, #e9f4f7 100%)',
+            border: '1px solid #c2e8e1',
+            borderRadius: '12px',
+            padding: '18px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            marginBottom: '26px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '8px',
+                background: 'var(--teal)',
+                display: 'grid',
+                placeItems: 'center',
+                color: 'white',
+                flexShrink: 0,
+              }}
+            >
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <strong style={{ color: '#094741', fontSize: '15px', display: 'block' }}>
+                Test 15 Authentic Demo BCQs for Free
+              </strong>
+              <small style={{ color: '#437672', fontSize: '13px' }}>
+                Experience our real question bank with detailed clinical rationales before completing your package payment.
+              </small>
+            </div>
+          </div>
+          <button
+            className="btn primary"
+            onClick={() => navigate('demo')}
+            style={{ fontSize: '13px', padding: '9px 18px', fontWeight: '700' }}
+          >
+            Launch 15 Demo BCQs
+          </button>
+        </div>
+      )}
+
       <div className="stats">
         {stats.map(([label, value, detail, Icon]: any) => (
           <div className="stat" key={label}>
@@ -90,6 +139,20 @@ export default function Dashboard({
                 <span>
                   <strong>Practice BCQs</strong>
                   <small>Learn one question at a time, with explanations.</small>
+                </span>
+              </button>
+              <button
+                className="quick"
+                onClick={() => navigate('demo')}
+                style={{ borderColor: '#bce3dc', background: '#f8fdfc' }}
+              >
+                <Sparkles style={{ color: 'var(--teal)' }} />
+                <span>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Demo BCQs
+                    <span className="badge-count" style={{ fontSize: '10px' }}>15 FREE</span>
+                  </strong>
+                  <small>15 authentic published questions with full rationales.</small>
                 </span>
               </button>
               <button className="quick" onClick={() => navigate('bookmarks')}>

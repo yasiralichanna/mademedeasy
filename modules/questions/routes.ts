@@ -8,6 +8,28 @@ import { validateQuestion, parseCSV } from './validation';
 import { categoryStatements, questionStatements, decodeQuestion } from './service';
 
 export async function handle(action: string, req: Request) {
+  if (action === 'demo') {
+    const url = new URL(req.url);
+    const yearParam = url.searchParams.get('year');
+    const matchFilter: any = { status: 'published' };
+    if (yearParam && !isNaN(Number(yearParam))) {
+      matchFilter.year = Number(yearParam);
+    }
+    const col = await collection('questions');
+    let qs = await col.aggregate([
+      { $match: matchFilter },
+      { $sample: { size: 15 } }
+    ]).toArray();
+
+    if (qs.length === 0 && matchFilter.year) {
+      qs = await col.aggregate([
+        { $match: { status: 'published' } },
+        { $sample: { size: 15 } }
+      ]).toArray();
+    }
+    return json(qs.map(decodeQuestion));
+  }
+
   const u = await requireUser(req, ['admin', 'save', 'import', 'categories', 'publish'].includes(action));
 
   if (action === 'catalog') {
