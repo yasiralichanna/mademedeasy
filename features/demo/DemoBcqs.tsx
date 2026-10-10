@@ -147,7 +147,7 @@ export default function DemoBcqs({
               </span>
             </div>
             <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>
-              Experience authentic MBBS exam BCQs with explanations from our 1,400+ question bank
+              Experience authentic MBBS exam BCQs with explanations from our 5,000+ question bank
             </p>
           </div>
         </div>
@@ -758,7 +758,7 @@ export default function DemoBcqs({
                   FULL ACCESS
                 </span>
                 <strong style={{ fontSize: '15px' }}>
-                  Ready to practice all 1,400+ MBBS BCQs?
+                  Ready to practice all 5,000+ MBBS BCQs?
                 </strong>
               </div>
               <p style={{ fontSize: '13px', color: '#b2c8cf', marginTop: '4px' }}>
@@ -936,11 +936,11 @@ export default function DemoBcqs({
                 JOIN HUNDREDS OF MEDICAL STUDENTS
               </span>
               <h2 style={{ fontSize: '26px', margin: '8px 0 12px', color: 'white' }}>
-                Unlock Complete Access to 1,400+ MBBS BCQs
+                Unlock Complete Access to 5,000+ MBBS BCQs
               </h2>
               <p style={{ color: '#b8ced5', fontSize: '15px', lineHeight: '1.6', marginBottom: '20px' }}>
                 You have just sampled 15 questions. The complete MedPrep platform gives you unlimited
-                access to all 1,400+ high-yield questions categorized by Year, Subject, and Module.
+                access to all 5,000+ high-yield questions categorized by Year, Subject, and Module.
               </p>
 
               <div
@@ -965,7 +965,7 @@ export default function DemoBcqs({
                   >
                     <Check size={13} />
                   </div>
-                  <span>1,400+ authentic university BCQs</span>
+                  <span>5,000+ authentic university BCQs</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px' }}>
                   <div
