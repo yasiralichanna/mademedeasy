@@ -312,15 +312,18 @@ export default function Profile({
                   />
                 </label>
                 <label>
-                  MBBS year
-                  <select name="year" defaultValue={profile?.year || ''} required>
-                    <option value="">Select year</option>
-                    {[1, 2, 3, 4, 5].map((y) => (
-                      <option key={y} value={y}>
-                        Year {y}
-                      </option>
-                    ))}
+                  MBBS year <span style={{ color: 'var(--red)' }}>*</span>
+                  <select name="year" defaultValue={profile?.year ? String(profile.year) : '4'} required>
+                    <option value="" disabled>Select MBBS year</option>
+                    <option value="1" disabled>Year 1 (Inactive / Coming soon)</option>
+                    <option value="2" disabled>Year 2 (Inactive / Coming soon)</option>
+                    <option value="3" disabled>Year 3 (Inactive / Coming soon)</option>
+                    <option value="4">Year 4 (Active)</option>
+                    <option value="5" disabled>Year 5 (Inactive / Coming soon)</option>
                   </select>
+                  <div className="field-note">
+                    Year selection is compulsory. Only 4th Year MBBS is currently active; other years are deactivated for now.
+                  </div>
                 </label>
               </div>
               {message && (

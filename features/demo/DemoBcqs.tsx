@@ -32,7 +32,7 @@ export default function DemoBcqs({
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('4');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<Record<string, number>>({});
   const [showSummary, setShowSummary] = useState(false);
@@ -170,12 +170,11 @@ export default function DemoBcqs({
                 borderRadius: '6px',
               }}
             >
-              <option value="all">All Years</option>
-              <option value="1">Year 1</option>
-              <option value="2">Year 2</option>
-              <option value="3">Year 3</option>
-              <option value="4">Year 4</option>
-              <option value="5">Year 5</option>
+              <option value="4">Year 4 (Active)</option>
+              <option value="1" disabled>Year 1 (Inactive)</option>
+              <option value="2" disabled>Year 2 (Inactive)</option>
+              <option value="3" disabled>Year 3 (Inactive)</option>
+              <option value="5" disabled>Year 5 (Inactive)</option>
             </select>
           </div>
 
